@@ -7,26 +7,21 @@
   const edges = []
 }
 
-PG = ( Entity / IgnorableSpace LineBreak )* IgnorableSpace End
+PG = ( Entity TrailingSpace? EntitySeparator / TrailingSpace LineBreak )* TrailingSpace
 {
-  for (let { from, to } of edges) {
-    if (!(from in nodes)) {
-      nodes[from] = { id: from, labels: [], properties: {} }
-    }
-    if (!(to in nodes)) {
-      nodes[to] = { id: to, labels: [], properties: {} }
-    }
-  }
   return graph(nodes, edges)
 }
 
 End
   = !.
 
-Entity
-  = ( Edge / Node ) ( Space* "|" Space* / IgnorableSpace ( LineBreak / End ) )
+EntitySeparator
+  = ( "|" Space* / LineBreak / End )
 
-IgnorableSpace
+Entity
+  = ( Edge / Node ) 
+
+TrailingSpace
   = Space? Comment?
 
 LineBreak "linebreak"
@@ -39,7 +34,7 @@ Comment "comment"
   = "#" [^\x0D\x0A]*
 
 WS
-  = ( IgnorableSpace LineBreak )* Space
+  = ( TrailingSpace LineBreak )* Space
 
 Node
   = id:Identifier labels:Label* props:Property* {
@@ -52,16 +47,30 @@ Node
       }
   }
 
+EdgeIdentifier
+ = ( @QuotedIdentifier ":" WS )
+  / ( @UnquotedIdentifier ":" WS )
+  / UnquotedIdentifierFollowedByColonAndSpace
+
 Edge
-  = start:(
-     from:Identifier direction:Direction { return { from, direction } }
-    )
+  = id:( EdgeIdentifier? )
+    from:( Identifier? ) 
+    direction:Direction 
     to:Identifier
     labels:Label*
     props:Property* {
-    const { from, direction } = start
+
     labels = Array.from(new Set(labels))
     const e = { from, to, labels, properties: addProperties(props) }
+    if (from) {
+      if (id) { e.id = id }
+    } else {
+      if (id) {
+        e.from = id
+      } else {
+        expected("identifier")
+      }
+    }
     if (direction === "--") {
       e.undirected = true
     }
@@ -75,36 +84,40 @@ Label "label"
   = WS ":" Space? id:Identifier { return id }
 
 Identifier
+  = QuotedIdentifier
+  / UnquotedIdentifier
+
+QuotedIdentifier
   = id:QuotedString { 
-      if (id === "") { error("Identifiers cannot be empty") }
+      if (id === "") { error("Identifier must not be empty") }
       return id
     }
-  / UnquotedIdentifier
 
 PlainChar
   = [^\x20\x09\x0A\x0D<>"{}|^`\\]
 
 PlainStart
-  = ![:(#] PlainChar
+  = ![:(#-] PlainChar
 
 UnquotedIdentifier
-  = PlainStart PlainChar* { return text() }
+  = $( PlainStart PlainChar* )
+
+UnquotedIdentifierFollowedByColonAndSpace
+ = id:( $PlainStart $( ( !":" PlainChar )* ":" )+ ) WS {
+      return id.join("").slice(0,-1)
+    }
 
 Property "property"
   = WS name:Key value:ValueList { return [ name, value ] }
 
 Key
-  = @( key:QuotedString Space? ":" {
-        if (key === "") { error("Property keys cannot be empty") }
-        return key
-      } )
+  = ( @QuotedIdentifier Space? ":" )
   / ( @UnquotedIdentifier Space ":" )
-  / name:( $PlainStart $( ( !":" PlainChar )* ":" )+ ) WS {
-      return name.join("").slice(0,-1)
-    }
-  / name:( $PlainStart $( !":" PlainChar )* ) ":" {
-      return name.join("")
-    }
+  / UnquotedIdentifierFollowedByColonAndSpace
+  / @UnquotedIdentifierWithoutColon ":"
+
+UnquotedIdentifierWithoutColon
+  = $( PlainStart ( !":" PlainChar )* )
 
 ValueList
   = first:( WS? @Value ) rest:( WS? "," WS? @Value )* {

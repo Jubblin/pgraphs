@@ -28,6 +28,8 @@ This package implements parsers and serializers to convert between labeled prope
   - [Mermaid](#mermaid)
   - [Graphology](#graphology)
   - [NCOL](#ncol)
+- [Databases](#databases)
+  - [Neo4J](#neo4j)
 - [License](#license)
 
 ## Background
@@ -50,7 +52,7 @@ Requires node >= 18.0.0 for use and >= 20.0.0 for development.
 npm install -g pgraphs
 ~~~
 
-To get data from Neo4J databases, also install:
+To [connect to Neo4J databases](#neo4j), also install:
 
 ~~~
 npm install -g neo4j-driver-lite
@@ -65,13 +67,13 @@ Browser bundles have not been created yet.
 Command `pgraph` is installed with this package:
 
 ~~~
-Usage: pgraph [options] [<input> [<output]]
+Usage: pgraph [options] [<source> [<target>]]
 
 Convert between property graph formats and databases.
 
 Options:
-  -f, --from [format]   input format
-  -t, --to [format]     output format
+  -f, --from [format]   source format
+  -t, --to [format]     target format
   -e, --errors          verbose error messages
   -i, --id [key]        copy node id to property
   -h, --html            generate HTML label (experimental)
@@ -80,35 +82,22 @@ Options:
   -V, --version         show the version number
 
 Supported conversion formats:
-  pg         from/to PG format (default input)
+  pg         from/to PG format (default source format)
   json       from/to PG-JSON
-  jsonl      from/to PG-JSONL (default output)
+  jsonl      from/to PG-JSONL (default target format)
   cypher     from/to Cypher CREATE statements
+  neo4j      from/to Neo4J database (via Cypher query)
   dot        from/to GraphViz DOT
   tgf        from/to Trivial Graph Format
   canvas     from/to JSON Canvas (experimental)
   graphology from/to Graphology import/export
   ncol       from/to NCOL file format
-  neo4j      from Neo4J server (via Cypher query)
   xml        to GraphML
   yarspg     to YARS-PG 5.0.0 without data types
   yarspg3    to YARS-PG 3.0.0 with optional labels
   csv        to OpenCypher/Neo4J CSV files
   neptune    to Neptune CSV import (aka Gremlin load data format)
   mmd        to Meermaid Flowchart (experimental)
-~~~
-
-The `neo4j` input format expects a JSON file with Neo4J database URI and
-credentials like this and requires to install node package `neo4j-driver` (this
-is done automatically by calling `npm install` but not if this package is
-installed as dependency of another project):
-
-~~~json
-{
-  "uri": "neo4j://example.org",
-  "user": "alice",
-  "password": "secret"
-}
 ~~~
 
 ### API
@@ -159,10 +148,12 @@ written from with this package:
 
 The repository of pgraphs contains [a CSV
 file](https://github.com/pg-format/pgraphs/blob/main/docs/features.csv)
+and equivalent [pg file](https://github.com/pg-format/pgraphs/blob/main/docs/features.pg)
 listing these and more graph formats with their capabilities to store
 [selected graph features](https://github.com/pg-format/pgraphs/blob/main/docs/features.md).
 
 ### PG format
+
 
 PG format was first proposed by Hirokazu Chiba, Ryota Yamanaka, and Shota
 Matsumoto ([2019](https://arxiv.org/abs/1907.03936),
@@ -182,6 +173,7 @@ and boolean values:
 
 See also:
 
+- [PG format grammar as railroad diagram](https://github.com/pg-format/pgraphs/blob/main/docs/pg-grammar.md)
 - [web application to beautify PG format](https://pg-format.github.io/pg-formatter/)
 - [planned formal specification of PG data model and format](https://github.com/pg-format/specification/)
 - [illustrating example of PG format](https://github.com/pg-format/pgraphs/blob/main/docs/pg-format.pg)
@@ -334,14 +326,14 @@ The example graph is serialized as following, in four files:
 102,person;student,Bob,Japan
 ~~~
 
-Repeated labels and property values are separated by semicolon so 
-this character is automactially stripped from labels and property
-values. Configuration of this character is not supported yet.
+Repeated labels and property values are separated by semicolon so this
+character is automactially stripped from labels and property values.
+Configuration of this character to some other value is not supported yet.
 
-Imported back into a Neo4J database and exported again (with output format
-`neo4j`) is serialized as following in PG. Thus conversion of property graphs
-between PG and Neo4J or Neptune should be round-trip apart from identifiers,
-removal of semicolons, and support of additional data types.
+[Imported into a Neo4J database](#neo4j) and exported again is serialized as
+following in PG. Thus conversion of property graphs between PG and Neo4J or
+Neptune should be round-trip apart from identifiers, undirected edges,
+semicolon, and support of additional data types:
 
 ~~~
 1 :person country:"United States" name:Alice name:Carol
@@ -441,12 +433,53 @@ With experimental option `--html` the full labels and properties of nodes and ed
 
 ![](mermaid.png)
 
+[mermaid-cli](https://www.npmjs.com/package/@mermaid-js/mermaid-cli) can be
+used to generate SVG files from Mermaid diagram files.
+
 ### NCOL
 
 The NCOL file format is used to visualize very large undirected graphs with
 [Large Graph Layout](https://github.com/TheOpteProject/LGL) software. The graph
 is eventually reduced to simple edges with optional weight, but extensions
 exist for coloring and node labels (not supported by this library).
+
+## Databases
+
+pgraphs can directly connect to some graph databases for import and/or export.
+
+### Neo4J
+
+Format `neo4j` requires to install node package `neo4j-driver` (done
+automatically by calling `npm install` unless pgraphs package is installed as
+dependency of another project) and expects a JSON file with Neo4J database
+Bolt-API URI and credentials as source or target. Use the following for
+a default installation on your local machine:
+
+~~~json
+{
+  "uri": "neo4j://localhost",
+  "user": "",
+  "password": ""
+}
+~~~
+
+Reading from a database uses a Cypher `MATCH` query. Writing into a database
+uses the list of Cypher `CREATE` queries as exported with [Cypher target
+format](#cypher-create), so the following should be equivalent:
+
+- `pgraphs graph.pg query.cypher` and manually execute query `query.cypher`
+- `pgraphs -t neo4j pgraph.pg neo4j.json`
+
+For larger graphs better export in [CSV format](#csv) to multiple files and
+bulk import the CSV files with `neo4j-admin database import`. Note that CSV
+format cannot express semicolon in repeated property values! Cypher command
+`LOAD CSV` will not work because it expects an additional `MERGE` clause and
+node/edges must have uniform labels.
+
+The [pgraphs git repository](https://github.com/pg-format/pgraphs/) contains
+shell scripts [in directory neo4j](https://github.com/pg-format/pgraphs/blob/main/neo4j/)
+to run a local Neo4J instance with Docker and to bulk import CSV files from
+local directly `./import`.
 
 ## License
 
