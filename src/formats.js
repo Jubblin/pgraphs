@@ -14,9 +14,9 @@ import gexf from "./format/gexf/index.js"
 import cyjs from "./format/cyjs/index.js"
 import gxl from "./format/gxl/index.js"
 import mmd from "./format/mermaid/index.js"
+import neptune from "./format/neptune/index.js"
 import serializeYARSPG from "./serializer/yarspg.js"
 import serializeYARSPG3 from "./serializer/yarspg3.js"
-import serializeNeptune from "./serializer/neptune.js"
 
 // Import serializeFlat from "./serializer/flat.js"
 
@@ -42,10 +42,7 @@ export const pgformat = {
     serialize: serializeYARSPG3,
   },
   csv,
-  neptune: {
-    name: "Neptune CSV import (aka Gremlin load data format)",
-    serialize: serializeNeptune,
-  },
+  neptune,
   gxl,
   mmd,
   flat: {
@@ -88,6 +85,11 @@ export const pgformat = {
   tp: { name: "Tulip TP" },
   vna: { name: "Netdraw VNA" },
   yed: { name: "yED CSV" },
+  dgs: {
+    name: "DGS",
+    // see https://github.com/graphstream/gs-core/blob/dev/src/org/graphstream/stream/file/dgs/DGSParser.java
+    url: "https://graphstream-project.org/doc/Advanced-Concepts/The-DGS-File-Format/"
+  },
   cyjs,
 }
 

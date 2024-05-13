@@ -206,7 +206,7 @@ function peg$parse(input, options) {
   var peg$r3 = /^[^ \t\n\r<>"{}|\^`\\]/;
   var peg$r4 = /^[:([#\-]/;
   var peg$r5 = /^[^`]/;
-  var peg$r6 = /^[^\0-\x1F"'\\]/;
+  var peg$r6 = /^[^\0-\b\v\f\x0E-\x1F"'\\]/;
   var peg$r7 = /^["'\/\\]/;
   var peg$r8 = /^[1-9]/;
   var peg$r9 = /^[0-9]/;
@@ -238,7 +238,7 @@ function peg$parse(input, options) {
   var peg$e21 = peg$literalExpectation("'", false);
   var peg$e22 = peg$literalExpectation("`", false);
   var peg$e23 = peg$classExpectation(["`"], true, false);
-  var peg$e24 = peg$classExpectation([["\0", "\x1F"], "\"", "'", "\\"], true, false);
+  var peg$e24 = peg$classExpectation([["\0", "\b"], "\v", "\f", ["\x0E", "\x1F"], "\"", "'", "\\"], true, false);
   var peg$e25 = peg$literalExpectation("\\", false);
   var peg$e26 = peg$classExpectation(["\"", "'", "/", "\\"], false, false);
   var peg$e27 = peg$literalExpectation("b", false);
@@ -575,7 +575,7 @@ function peg$parse(input, options) {
   }
 
   function peg$parseEntitySeparator() {
-    var s0, s1, s2, s3;
+    var s0, s1, s2;
 
     s0 = peg$currPos;
     if (input.charCodeAt(peg$currPos) === 124) {
@@ -586,11 +586,9 @@ function peg$parse(input, options) {
       if (peg$silentFails === 0) { peg$fail(peg$e1); }
     }
     if (s1 !== peg$FAILED) {
-      s2 = [];
-      s3 = peg$parseSpace();
-      while (s3 !== peg$FAILED) {
-        s2.push(s3);
-        s3 = peg$parseSpace();
+      s2 = peg$parseSpace();
+      if (s2 === peg$FAILED) {
+        s2 = null;
       }
       s1 = [s1, s2];
       s0 = s1;

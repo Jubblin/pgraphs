@@ -7,14 +7,15 @@ export default {
   direction: "mixed",
   edgeAttributes: false,
   edgeIdentifier: false,
-  edgeName: true,
+  edgeName: "name", 
   edgeTypes: false,
+  edgeWeight: false, // but planned, see https://github.com/mermaid-js/mermaid/issues/1736
   graphAttributes: false,
   hierarchy: true,
   hyperEdges: false,
   multiEdges: true,
   nodeAttributes: false,
-  nodeName: true,
+  nodeName: "name",
   nodeTypes: false,
   visualAttributes: true,
 

@@ -1,6 +1,6 @@
 {
   "name": "pgraphs",
-  "version": "0.6.6",
+  "version": "0.6.9",
   "description": "Property Graph Exchange Format (PG) converters",
   "license": "MIT",
   "homepage": "https://github.com/pg-format/pgraphs#readme",
@@ -38,6 +38,8 @@
     "peggy": "peggy",
     "peggy-tracks": "peggy-tracks",
     "docs": "./docs/make.sh; npm run features",
+    "dot.png": "./bin/pgraph.js examples/example.pg --html -t dot | dot -Tpng -o dot.png",
+    "mermaid.png": "./bin/pgraph.js examples/example.pg --html -t mmd | mmdc -i - -o mermaid.png",
     "build": "npm run parser && npm test && npm run docs",
     "features": "./bin/features.js",
     "release": "git checkout dev && git pull && npm run build && npm version $SEMVER && git push && git checkout main && git merge dev && git push --follow-tags && git checkout dev",
@@ -52,6 +54,7 @@
   "dependencies": {
     "@pinemach/csv": "^1.0.4",
     "dotparser": "^1.1.1",
+    "fast-xml-parser": "^4.3.6",
     "pgraphs": "^0.1.0"
   }
 }

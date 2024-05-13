@@ -17,15 +17,15 @@ This package implements parsers and serializers to convert between labeled prope
 - [Formats](#formats)
   - [PG format](#pg-format)
   - [PG JSON and JSONL](#pg-json-and-jsonl)
-  - [GraphViz DOT](#graphviz-dot)
   - [GraphML](#graphml)
   - [Cypher CREATE](#cypher-create)
   - [YARS-PG](#yars-pg)
   - [CSV](#csv)
   - [Neptune CSV](#neptune-csv)
   - [TGF](#tgf)
-  - [JSON Canvas](#json-canvas)
+  - [GraphViz DOT](#graphviz-dot)
   - [Mermaid](#mermaid)
+  - [JSON Canvas](#json-canvas)
   - [Graphology](#graphology)
   - [NCOL](#ncol)
 - [Databases](#databases)
@@ -83,7 +83,7 @@ Options:
   -f, --from [format]   source format
   -t, --to [format]     target format
   -i, --id [key]        copy node id to property
-  -h, --html            generate HTML label (experimental)
+  --html                generate HTML label
   -s, --scale [factor]  scale spatial properties x,y,width,height,pos
   -e, --errors          verbose error messages
   -q, --quiet           don't warn when graph is reduced
@@ -107,6 +107,7 @@ Supported conversion formats:
   csv        to OpenCypher/Neo4J CSV files
   neptune    to Neptune CSV import (aka Gremlin load data format)
   mmd        to Meermaid Flowchart (experimental)
+  gexf       to Graph Exchange XML Format (GEXF)
 ~~~
 
 ### Docker
@@ -176,6 +177,7 @@ written from with this package:
 | yes  | yes   | [Graphology](#graphology)               |
 | yes  | yes   | [NCOL](#ncol)                           |
 |      | yes   | [GraphML](#graphml)                     |
+|      | yes   | [GEXF](#gexf)                           |
 |      | yes   | [YARS-PG](#yars-pg)                     |
 |      | yes   | OpenCypher/Neo4J [CSV](#csv)            |
 |      | yes   | Amazon [Neptune CSV](#neptune-csv)      |
@@ -248,31 +250,28 @@ and a [JSON Schema for PG-JSONL](https://github.com/pg-format/specification/raw/
 
 ### GraphViz DOT
 
-When exported [to GraphViz DOT](examples/example.dot) format, labels are ignored:
+When exported [to GraphViz DOT](examples/example.dot) format, labels are ignored and edges become either all undirected or stay all directed.
 
 ~~~dot
 graph {
   101 [country="United States" name=Alice];
   102 [country=Japan name=Bob];
   101 -- 102 [since=2012];
-  101 -> 102 [since=2015];
+  101 -- 102 [since=2015];
 }
 ~~~
 
-Parsed again from dot to PG format all edges are undirected, except for digraphs:
-
-~~~
-101 country:"United States" name:Alice
-102 country:Japan name:Bob
-101 -- 102 since:2012
-101 -- 102 since:2015
-~~~
-
-Graphviz can be generate image files from any other graph source:
+[Graphviz](https://graphviz.org/) can generate image files from DOT, so pgraph
+can be used to create diagrams from any other graph source:
 
 ~~~sh
 pgraph graph.pg -t dot | dot -Tsvg -o graph.svg
 ~~~
+
+With option `--html` the full labels and properties of nodes and edges are
+converted to HTML labels, resulting in the following diagram:
+
+![](dot.png)
 
 ### GraphML
 
@@ -302,6 +301,12 @@ values are converted to strings:
   </graph>
 </graphml>
 ~~~
+
+### GEXF
+
+When exported to [GEXF 1.3](https://gexf.net/), labels but the first edge label
+and multi-edges of same label are ignored. Export of properties as GEXF
+attributes has not been implemented yet, so this export format is experimental.
 
 ### Cypher CREATE
 
@@ -472,10 +477,6 @@ flowchart LR
     101 --> 102
 ~~~
 
-With experimental option `--html` the full labels and properties of nodes and edges are converted to HTML labels, resulting in the following diagram:
-
-![](mermaid.png)
-
 [mermaid-cli](https://www.npmjs.com/package/@mermaid-js/mermaid-cli) can be
 used to generate image files from Mermaid diagram files or from any other graph
 source:
@@ -483,6 +484,11 @@ source:
 ~~~sh
 pgraph graph.pg --html -t mmd | mmdc -i - -o graph.svg
 ~~~
+
+With option `--html` the full labels and properties of nodes and edges are
+converted to HTML labels, resulting in the following diagram:
+
+![](mermaid.png)
 
 ### NCOL
 
@@ -515,8 +521,8 @@ Reading from a database uses a Cypher `MATCH` query. Writing into a database
 uses the list of Cypher `CREATE` queries as exported with [Cypher target
 format](#cypher-create), so the following should be equivalent:
 
-- `pgraphs graph.pg query.cypher` and manually execute query `query.cypher`
-- `pgraphs -t neo4j pgraph.pg neo4j.json`
+- `pgraph graph.pg query.cypher` and manually execute query `query.cypher`
+- `pgraph -t neo4j pgraph.pg neo4j.json`
 
 Reading from and writing to other graph database systems supporting Cypher and
 Bolt protocol ([Memgraph](https://memgraph.com/), [Kuzú](https://kuzudb.com/),
